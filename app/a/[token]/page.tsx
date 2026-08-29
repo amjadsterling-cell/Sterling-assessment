@@ -327,8 +327,8 @@ export default function AssessmentPage({ params }: { params: { token: string } }
                     </button>
                   )}
                   <button
-                    onClick={async () => {
-                      await uploadRecording("passage", passageRecorder.blob!);
+                    onClick={() => {
+                      uploadRecording("passage", passageRecorder.blob!);
                       next();
                     }}
                     className="flex-1 bg-brand-gradient text-white font-semibold rounded-lg py-3"
@@ -382,8 +382,8 @@ export default function AssessmentPage({ params }: { params: { token: string } }
                     </button>
                   )}
                   <button
-                    onClick={async () => {
-                      await uploadRecording("speaking", speakingRecorder.blob!);
+                    onClick={() => {
+                      uploadRecording("speaking", speakingRecorder.blob!);
                       next();
                     }}
                     className="flex-1 bg-brand-gradient text-white font-semibold rounded-lg py-3"
