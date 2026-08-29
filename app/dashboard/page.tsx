@@ -123,14 +123,14 @@ export default async function DashboardPage({
             name="q"
             defaultValue={q}
             placeholder="e.g. Amjad or 8590..."
-            className="w-full border rounded-lg px-3 py-2 text-sm"
+            className="w-full h-10 border rounded-lg px-3 text-sm"
           />
         </div>
 
         {isAdmin && (
           <div className="min-w-[160px]">
             <label className="text-xs text-gray-500 block mb-1">Counsellor</label>
-            <select name="counsellor" defaultValue={counsellorFilter} className="w-full border rounded-lg px-3 py-2 text-sm">
+            <select name="counsellor" defaultValue={counsellorFilter} className="w-full h-10 border rounded-lg px-3 text-sm">
               <option value="">All counsellors</option>
               {counsellorOptions.map((c) => (
                 <option key={c.id} value={c.id}>
@@ -143,7 +143,7 @@ export default async function DashboardPage({
 
         <div className="min-w-[160px]">
           <label className="text-xs text-gray-500 block mb-1">Status</label>
-          <select name="status" defaultValue={statusFilter} className="w-full border rounded-lg px-3 py-2 text-sm">
+          <select name="status" defaultValue={statusFilter} className="w-full h-10 border rounded-lg px-3 text-sm">
             <option value="">All statuses</option>
             {STATUS_OPTIONS.map((s) => (
               <option key={s} value={s}>
@@ -155,15 +155,15 @@ export default async function DashboardPage({
 
         <div className="min-w-[160px]">
           <label className="text-xs text-gray-500 block mb-1">Created on</label>
-          <input type="date" name="date" defaultValue={dateFilter} className="w-full border rounded-lg px-3 py-2 text-sm" />
+          <input type="date" name="date" defaultValue={dateFilter} className="w-full h-10 border rounded-lg px-3 text-sm" />
         </div>
 
         <div className="flex gap-2">
-          <button type="submit" className="bg-brand-gradient text-white text-sm font-semibold px-4 py-2 rounded-lg">
+          <button type="submit" className="h-10 bg-brand-gradient text-white text-sm font-semibold px-4 rounded-lg">
             Filter
           </button>
           {hasActiveFilters && (
-            <Link href="/dashboard" className="text-sm font-semibold px-4 py-2 rounded-lg border text-gray-600">
+            <Link href="/dashboard" className="h-10 flex items-center text-sm font-semibold px-4 rounded-lg border text-gray-600">
               Clear
             </Link>
           )}
