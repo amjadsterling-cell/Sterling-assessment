@@ -9,6 +9,7 @@ export default function LoginPage() {
   const [mode, setMode] = useState<"password" | "magic">("password");
   const [status, setStatus] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   async function handlePasswordLogin(e: React.FormEvent) {
     e.preventDefault();
@@ -31,7 +32,7 @@ export default function LoginPage() {
     const supabase = supabaseBrowser();
     const { error } = await supabase.auth.signInWithOtp({
       email,
-      options: { emailRedirectTo: `${window.location.origin}/dashboard` }
+      options: { emailRedirectTo: `${window.location.origin}/auth/callback?next=/dashboard` }
     });
     setLoading(false);
     setStatus(error ? error.message : "Check your email for a login link.");
@@ -60,13 +61,23 @@ export default function LoginPage() {
           {mode === "password" && (
             <div>
               <label className="text-sm text-gray-700">Password</label>
-              <input
-                type="password"
-                required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="mt-1 w-full border rounded-lg px-3 py-2 text-sm"
-              />
+              <div className="relative mt-1">
+                <input
+                  type={showPassword ? "text" : "password"}
+                  required
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="w-full border rounded-lg px-3 py-2 pr-16 text-sm"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((v) => !v)}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-gray-500 underline"
+                  tabIndex={-1}
+                >
+                  {showPassword ? "Hide" : "Show"}
+                </button>
+              </div>
             </div>
           )}
 
