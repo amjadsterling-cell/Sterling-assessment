@@ -4,9 +4,9 @@ import { supabaseAdmin } from "@/lib/supabase/admin";
 
 function StatCard({ label, value }: { label: string; value: number | string }) {
   return (
-    <div className="bg-white rounded-xl shadow-sm p-4 border">
-      <p className="text-xs text-gray-500 label">{label}</p>
-      <p className="text-2xl font-heading font-bold mt-1">{value}</p>
+    <div className="bg-[#161310] border border-[#221d15] rounded-xl p-4">
+      <p className="text-xs text-[#9a9282] label">{label}</p>
+      <p className="text-2xl font-heading font-bold mt-1 text-[#f2ede1]">{value}</p>
     </div>
   );
 }
@@ -15,16 +15,16 @@ const STATUS_OPTIONS = ["sent", "started", "recording", "processing", "complete"
 
 function statusBadge(status: string) {
   const colors: Record<string, string> = {
-    sent: "bg-gray-100 text-gray-700",
-    started: "bg-yellow-100 text-yellow-800",
-    recording: "bg-yellow-100 text-yellow-800",
-    processing: "bg-blue-100 text-blue-800",
-    complete: "bg-green-100 text-green-800",
-    insufficient_sample: "bg-orange-100 text-orange-800",
-    failed: "bg-red-100 text-red-800"
+    sent: "bg-[#201c15] text-[#9a9282]",
+    started: "bg-[#35270f] text-[#e3a94a]",
+    recording: "bg-[#35270f] text-[#e3a94a]",
+    processing: "bg-[#0f2333] text-[#6fb4e0]",
+    complete: "bg-[#17331f] text-[#7fd394]",
+    insufficient_sample: "bg-[#35270f] text-[#e3a94a]",
+    failed: "bg-[#331515] text-[#e07f7f]"
   };
   return (
-    <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${colors[status] ?? "bg-gray-100"}`}>
+    <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${colors[status] ?? "bg-[#201c15] text-[#9a9282]"}`}>
       {status.replace("_", " ")}
     </span>
   );
@@ -38,8 +38,6 @@ export default async function DashboardPage({
   const counsellor = await getCurrentCounsellor();
   const db = supabaseAdmin();
 
-  // Only admins see everyone's assessments. Trainers and counsellors both
-  // only see the leads assigned to them.
   const isAdmin = counsellor?.role === "admin";
 
   const counsellorFilter = searchParams.counsellor ?? "";
@@ -47,7 +45,6 @@ export default async function DashboardPage({
   const dateFilter = searchParams.date ?? "";
   const q = (searchParams.q ?? "").trim();
 
-  // Load the counsellor list for the filter dropdown (admin only).
   let counsellorOptions: { id: string; name: string }[] = [];
   if (isAdmin) {
     const { data } = await db.from("counsellors").select("id, name").order("name");
@@ -60,8 +57,6 @@ export default async function DashboardPage({
     .order("created_at", { ascending: false })
     .limit(200);
 
-  // Resolve which leads this query should be restricted to, if any of:
-  // not-admin, a counsellor filter, or a name/phone search is active.
   const needsLeadRestriction = !isAdmin || counsellorFilter || q;
   if (needsLeadRestriction) {
     let leadQuery = db.from("leads").select("id");
@@ -102,8 +97,8 @@ export default async function DashboardPage({
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-xl font-bold">Dashboard</h1>
-        <Link href="/dashboard/new" className="bg-brand-gradient text-white text-sm font-semibold px-4 py-2 rounded-lg">
+        <h1 className="text-xl font-bold text-[#f2ede1]">Dashboard</h1>
+        <Link href="/dashboard/new" className="bg-brand-gradient text-brand-black text-sm font-bold px-4 py-2 rounded-lg">
           + New assessment
         </Link>
       </div>
@@ -115,22 +110,26 @@ export default async function DashboardPage({
         <StatCard label="Conversion" value={`${conversion}%`} />
       </div>
 
-      <form method="get" className="bg-white rounded-xl shadow-sm border p-4 mb-4 flex flex-wrap items-end gap-3">
-        <div className=" min-w-[220px]">
-          <label className="text-xs text-gray-500 block mb-1">Search (name or phone)</label>
+      <form method="get" className="bg-[#0d0b08] border border-[#221d15] rounded-xl p-4 mb-4 flex flex-wrap items-end gap-3">
+        <div className="min-w-[220px]">
+          <label className="text-xs text-[#9a9282] block mb-1">Search (name or phone)</label>
           <input
             type="text"
             name="q"
             defaultValue={q}
             placeholder="e.g. Amjad or 8590..."
-            className="w-full h-10 border rounded-lg px-3 text-sm"
+            className="w-full h-10 bg-[#161310] border border-[#2a2419] rounded-lg px-3 text-sm text-[#f2ede1] placeholder:text-[#6b6459]"
           />
         </div>
 
         {isAdmin && (
           <div className="min-w-[160px]">
-            <label className="text-xs text-gray-500 block mb-1">Counsellor</label>
-            <select name="counsellor" defaultValue={counsellorFilter} className="w-full h-10 border rounded-lg px-3 text-sm">
+            <label className="text-xs text-[#9a9282] block mb-1">Counsellor</label>
+            <select
+              name="counsellor"
+              defaultValue={counsellorFilter}
+              className="w-full h-10 bg-[#161310] border border-[#2a2419] rounded-lg px-3 text-sm text-[#f2ede1]"
+            >
               <option value="">All counsellors</option>
               {counsellorOptions.map((c) => (
                 <option key={c.id} value={c.id}>
@@ -142,8 +141,12 @@ export default async function DashboardPage({
         )}
 
         <div className="min-w-[160px]">
-          <label className="text-xs text-gray-500 block mb-1">Status</label>
-          <select name="status" defaultValue={statusFilter} className="w-full h-10 border rounded-lg px-3 text-sm">
+          <label className="text-xs text-[#9a9282] block mb-1">Status</label>
+          <select
+            name="status"
+            defaultValue={statusFilter}
+            className="w-full h-10 bg-[#161310] border border-[#2a2419] rounded-lg px-3 text-sm text-[#f2ede1]"
+          >
             <option value="">All statuses</option>
             {STATUS_OPTIONS.map((s) => (
               <option key={s} value={s}>
@@ -154,25 +157,33 @@ export default async function DashboardPage({
         </div>
 
         <div className="min-w-[160px]">
-          <label className="text-xs text-gray-500 block mb-1">Created on</label>
-          <input type="date" name="date" defaultValue={dateFilter} className="w-full h-10 border rounded-lg px-3 text-sm" />
+          <label className="text-xs text-[#9a9282] block mb-1">Created on</label>
+          <input
+            type="date"
+            name="date"
+            defaultValue={dateFilter}
+            className="w-full h-10 bg-[#161310] border border-[#2a2419] rounded-lg px-3 text-sm text-[#f2ede1]"
+          />
         </div>
 
         <div className="flex gap-2">
-          <button type="submit" className="h-10 bg-brand-gradient text-white text-sm font-semibold px-4 rounded-lg">
+          <button type="submit" className="h-10 bg-brand-gradient text-brand-black text-sm font-bold px-4 rounded-lg">
             Filter
           </button>
           {hasActiveFilters && (
-            <Link href="/dashboard" className="h-10 flex items-center text-sm font-semibold px-4 rounded-lg border text-gray-600">
+            <Link
+              href="/dashboard"
+              className="h-10 flex items-center text-sm font-semibold px-4 rounded-lg border border-[#2a2419] text-[#9a9282]"
+            >
               Clear
             </Link>
           )}
         </div>
       </form>
 
-      <div className="bg-white rounded-xl shadow-sm border overflow-hidden">
+      <div className="bg-[#0d0b08] border border-[#221d15] rounded-xl overflow-hidden">
         <table className="w-full text-sm">
-          <thead className="bg-gray-50 text-gray-500 text-xs uppercase">
+          <thead className="bg-[#161310] text-[#7d7568] text-xs uppercase tracking-wide">
             <tr>
               <th className="text-left px-4 py-3">Lead</th>
               <th className="text-left px-4 py-3">Phone</th>
@@ -185,23 +196,23 @@ export default async function DashboardPage({
           </thead>
           <tbody>
             {(assessments ?? []).map((a: any) => (
-              <tr key={a.id} className="border-t hover:bg-gray-50">
+              <tr key={a.id} className="border-t border-[#1c1712] hover:bg-[#161310]">
                 <td className="px-4 py-3">
-                  <Link href={`/dashboard/report/${a.id}`} className="font-medium text-brand-pink">
+                  <Link href={`/dashboard/report/${a.id}`} className="font-semibold text-brand-gold">
                     {a.leads?.name ?? "—"}
                   </Link>
                 </td>
-                <td className="px-4 py-3 text-gray-600">{a.leads?.phone ?? "—"}</td>
-                {isAdmin && <td className="px-4 py-3 text-gray-600">{a.leads?.counsellors?.name ?? "—"}</td>}
+                <td className="px-4 py-3 text-[#b8b2a4]">{a.leads?.phone ?? "—"}</td>
+                {isAdmin && <td className="px-4 py-3 text-[#b8b2a4]">{a.leads?.counsellors?.name ?? "—"}</td>}
                 <td className="px-4 py-3">{statusBadge(a.status)}</td>
-                <td className="px-4 py-3">{a.overall_score ?? "—"}</td>
-                <td className="px-4 py-3">{a.recommended_course ?? "—"}</td>
-                <td className="px-4 py-3 text-gray-500">{new Date(a.created_at).toLocaleDateString()}</td>
+                <td className="px-4 py-3 text-[#d9d3c4]">{a.overall_score ?? "—"}</td>
+                <td className="px-4 py-3 text-[#d9d3c4]">{a.recommended_course ?? "—"}</td>
+                <td className="px-4 py-3 text-[#7d7568]">{new Date(a.created_at).toLocaleDateString()}</td>
               </tr>
             ))}
             {(!assessments || assessments.length === 0) && (
               <tr>
-                <td colSpan={isAdmin ? 7 : 6} className="px-4 py-8 text-center text-gray-400">
+                <td colSpan={isAdmin ? 7 : 6} className="px-4 py-8 text-center text-[#7d7568]">
                   {hasActiveFilters ? "No assessments match these filters." : "No assessments yet. Create your first link."}
                 </td>
               </tr>
