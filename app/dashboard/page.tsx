@@ -117,7 +117,7 @@ export default async function DashboardPage({
             type="text"
             name="q"
             defaultValue={q}
-            placeholder="e.g. Amjad or 8590..."
+            placeholder="Search here"
             className="w-full h-10 bg-[#161310] border border-[#2a2419] rounded-lg px-3 text-sm text-[#f2ede1] placeholder:text-[#6b6459]"
           />
         </div>
