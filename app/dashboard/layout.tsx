@@ -50,7 +50,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
           <SignOutButton />
         </div>
       </aside>
-      <main className="flex-1 bg-gray-50 min-h-screen p-6">{children}</main>
+      <main className="flex-1 bg-[#100d0a] min-h-screen p-6">{children}</main>
     </div>
   );
 }
