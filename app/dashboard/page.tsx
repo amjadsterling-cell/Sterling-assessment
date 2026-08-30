@@ -116,7 +116,7 @@ export default async function DashboardPage({
       </div>
 
       <form method="get" className="bg-white rounded-xl shadow-sm border p-4 mb-4 flex flex-wrap items-end gap-3">
-        <div className="flex-1 min-w-[180px]">
+        <div className=" min-w-[220px]">
           <label className="text-xs text-gray-500 block mb-1">Search (name or phone)</label>
           <input
             type="text"
