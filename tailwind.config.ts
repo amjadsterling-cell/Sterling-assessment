@@ -6,16 +6,16 @@ const config: Config = {
     extend: {
       colors: {
         brand: {
-          pink: "#ed1f51",
-          orange: "#f05825",
-          black: "#050408"
+          gold: "#e8c46b",
+          goldDark: "#a9720f",
+          black: "#050403"
         }
       },
       backgroundImage: {
-        "brand-gradient": "linear-gradient(120deg,#ed1f51,#f05825)"
+        "brand-gradient": "linear-gradient(120deg,#f6dc9a,#c9942f)"
       },
       fontFamily: {
-        heading: ["Montserrat", "sans-serif"],
+        heading: ["'Playfair Display'", "Georgia", "serif"],
         label: ["Barlow", "sans-serif"],
         body: ["Inter", "sans-serif"]
       }
