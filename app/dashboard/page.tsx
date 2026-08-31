@@ -4,8 +4,12 @@ import { supabaseAdmin } from "@/lib/supabase/admin";
 
 function StatCard({ label, value }: { label: string; value: number | string }) {
   return (
-    <div className="bg-[#161310] border border-[#221d15] rounded-xl p-4">
-      <p className="text-xs text-[#9a9282] label">{label}</p>
+    <div className="relative bg-[#161310] border border-[#221d15] rounded-xl p-4 overflow-hidden">
+      <div
+        className="absolute top-0 left-3 right-3 h-[3px] rounded-full"
+        style={{ background: "linear-gradient(120deg,#ed1f51,#f05825)" }}
+      />
+      <p className="text-xs text-[#9a9282] label uppercase tracking-wide">{label}</p>
       <p className="text-2xl font-heading font-bold mt-1 text-[#f2ede1]">{value}</p>
     </div>
   );
