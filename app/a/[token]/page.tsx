@@ -49,17 +49,23 @@ function QuestionField({
   if (q.type === "choice") {
     return (
       <div className="space-y-2">
-        {q.options?.map((opt) => (
-          <button
-            key={opt}
-            onClick={() => onChange(opt)}
-            className={`w-full text-left px-4 py-3 rounded-lg border text-sm ${
-              value === opt ? "border-brand-pink bg-brand-pink/5 font-semibold" : "border-gray-200"
-            }`}
-          >
-            {opt}
-          </button>
-        ))}
+        {q.options?.map((opt) => {
+          const selected = value === opt;
+          return (
+            <button
+              key={opt}
+              onClick={() => onChange(opt)}
+              className={`w-full flex items-center justify-between text-left px-4 py-3 rounded-lg border-2 text-sm transition-colors ${
+                selected
+                  ? "border-brand-pink bg-brand-gradient text-white font-semibold"
+                  : "border-gray-200 text-gray-800"
+              }`}
+            >
+              <span>{opt}</span>
+              {selected && <span className="ml-2 text-white">✓</span>}
+            </button>
+          );
+        })}
       </div>
     );
   }
@@ -263,21 +269,27 @@ export default function AssessmentPage({ params }: { params: { token: string } }
               <div key={q.id}>
                 <p className="text-sm font-semibold mb-2">{q.prompt}</p>
                 <div className="space-y-2">
-                  {q.options.map((opt) => (
-                    <button
-                      key={opt.key}
-                      onClick={() => {
-                        const updated = { ...quizAnswers, [q.id]: opt.key };
-                        setQuizAnswers(updated);
-                        autosave({ quiz_answers: updated });
-                      }}
-                      className={`w-full text-left px-4 py-3 rounded-lg border text-sm ${
-                        quizAnswers[q.id] === opt.key ? "border-brand-pink bg-brand-pink/5 font-semibold" : "border-gray-200"
-                      }`}
-                    >
-                      {opt.text}
-                    </button>
-                  ))}
+                  {q.options.map((opt) => {
+                    const selected = quizAnswers[q.id] === opt.key;
+                    return (
+                      <button
+                        key={opt.key}
+                        onClick={() => {
+                          const updated = { ...quizAnswers, [q.id]: opt.key };
+                          setQuizAnswers(updated);
+                          autosave({ quiz_answers: updated });
+                        }}
+                        className={`w-full flex items-center justify-between text-left px-4 py-3 rounded-lg border-2 text-sm transition-colors ${
+                          selected
+                            ? "border-brand-pink bg-brand-gradient text-white font-semibold"
+                            : "border-gray-200 text-gray-800"
+                        }`}
+                      >
+                        <span>{opt.text}</span>
+                        {selected && <span className="ml-2 text-white">✓</span>}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
             ))}
