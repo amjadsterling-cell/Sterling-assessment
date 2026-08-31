@@ -1,7 +1,7 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getCurrentCounsellor } from "@/lib/auth";
 import SignOutButton from "./sign-out-button";
+import SidebarNav from "./sidebar-nav";
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const counsellor = await getCurrentCounsellor();
@@ -20,29 +20,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
             <p className="text-[9px] tracking-[2px] text-gray-500">STUDY ABROAD</p>
           </div>
         </div>
-        <nav className="flex-1 px-3 space-y-1 text-sm">
-          <Link href="/dashboard" className="block px-3 py-2 rounded-lg hover:bg-white/10">
-            Dashboard
-          </Link>
-          <Link href="/dashboard/new" className="block px-3 py-2 rounded-lg hover:bg-white/10">
-            New assessment
-          </Link>
-          {(isAdmin || isTrainer) && (
-            <p className="px-3 pt-3 text-[11px] uppercase tracking-wide text-gray-500">
-              Admin / trainer
-            </p>
-          )}
-          {isAdmin && (
-            <>
-              <Link href="/dashboard/content" className="block px-3 py-2 rounded-lg hover:bg-white/10">
-                Edit questions
-              </Link>
-              <Link href="/dashboard/team" className="block px-3 py-2 rounded-lg hover:bg-white/10">
-                Team
-              </Link>
-            </>
-          )}
-        </nav>
+        <SidebarNav isAdmin={isAdmin} isTrainer={isTrainer} />
         <div className="p-4 border-t border-white/10">
           <p className="text-xs text-gray-400 mb-2">
             {counsellor.name} · {counsellor.role}
