@@ -9,6 +9,7 @@ export default function NewAssessmentPage() {
   const [link, setLink] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -79,10 +80,16 @@ export default function NewAssessmentPage() {
           <div className="flex gap-2">
             <input readOnly value={link} className="flex-1 border rounded-lg px-3 py-2 text-sm bg-gray-50" />
             <button
-              onClick={() => navigator.clipboard.writeText(link)}
-              className="px-3 py-2 rounded-lg bg-brand-black text-white text-sm"
+              onClick={() => {
+                navigator.clipboard.writeText(link!);
+                setCopied(true);
+                setTimeout(() => setCopied(false), 2000);
+              }}
+              className={`px-3 py-2 rounded-lg text-sm font-semibold transition-colors ${
+                copied ? "bg-green-600 text-white" : "bg-brand-black text-white"
+              }`}
             >
-              Copy
+              {copied ? "Copied!" : "Copy"}
             </button>
           </div>
           <a
