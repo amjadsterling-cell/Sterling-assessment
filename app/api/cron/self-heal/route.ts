@@ -39,7 +39,16 @@ export async function GET(req: NextRequest) {
         },
         quizErrors: [],
         passageTranscript: a.passage_transcript,
-        speakingTranscript: a.speaking_transcript,
+        speakingTranscript: [
+          a.speaking_prompt_1 ? `Answer to prompt 1 ("${a.speaking_prompt_1}"): ${a.speaking_transcript}` : a.speaking_transcript,
+          a.speaking_transcript_2
+            ? a.speaking_prompt_2
+              ? `Answer to prompt 2 ("${a.speaking_prompt_2}"): ${a.speaking_transcript_2}`
+              : a.speaking_transcript_2
+            : null
+        ]
+          .filter(Boolean)
+          .join("\n\n"),
         missedTargetWords: (a.metrics as any)?.missedTargetWords ?? [],
         metrics: a.metrics ?? {},
         scores: {
@@ -84,18 +93,18 @@ export async function GET(req: NextRequest) {
   const cutoff = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
   const { data: old } = await db
     .from("assessments")
-    .select("token, passage_audio_url, speaking_audio_url")
+    .select("token, passage_audio_url, speaking_audio_url, speaking_audio_url_2")
     .lt("created_at", cutoff)
-    .or("passage_audio_url.not.is.null,speaking_audio_url.not.is.null");
+    .or("passage_audio_url.not.is.null,speaking_audio_url.not.is.null,speaking_audio_url_2.not.is.null");
 
   for (const a of old ?? []) {
-    const paths = [a.passage_audio_url, a.speaking_audio_url].filter(Boolean) as string[];
+    const paths = [a.passage_audio_url, a.speaking_audio_url, a.speaking_audio_url_2].filter(Boolean) as string[];
     if (paths.length === 0) continue;
     const { error } = await db.storage.from("recordings").remove(paths);
     if (!error) {
       await db
         .from("assessments")
-        .update({ passage_audio_url: null, speaking_audio_url: null })
+        .update({ passage_audio_url: null, speaking_audio_url: null, speaking_audio_url_2: null })
         .eq("token", a.token);
       results.recordingsDeleted += paths.length;
     }
