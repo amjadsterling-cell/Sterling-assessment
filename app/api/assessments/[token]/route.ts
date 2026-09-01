@@ -37,8 +37,14 @@ export async function GET(_req: NextRequest, { params }: { params: { token: stri
 
   const content = assessment.content_versions?.content;
   const passage = (content?.passages ?? []).find((p: any) => p.id === assessment.passage_id) ?? content?.passages?.[0];
-  const speakingPrompt =
-    content?.speakingPrompts?.[Math.floor(Math.random() * content.speakingPrompts.length)] ?? null;
+  const prompts = content?.speakingPrompts ?? [];
+  const idx1 = prompts.length ? Math.floor(Math.random() * prompts.length) : -1;
+  let idx2 = idx1;
+  if (prompts.length > 1) {
+    while (idx2 === idx1) idx2 = Math.floor(Math.random() * prompts.length);
+  }
+  const speakingPrompt = idx1 >= 0 ? prompts[idx1] : null;
+  const speakingPrompt2 = idx2 >= 0 ? prompts[idx2] : null;
 
   return NextResponse.json({
     status: assessment.status,
@@ -61,6 +67,7 @@ export async function GET(_req: NextRequest, { params }: { params: { token: stri
       quiz: content?.quiz ?? [],
       passage,
       speakingPrompt,
+      speakingPrompt2,
       goalsQuestions: content?.goalsQuestions ?? []
     }
   });
