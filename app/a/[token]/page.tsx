@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRecorder, type RecorderState } from "@/lib/useRecorder";
+import { useRecorder } from "@/lib/useRecorder";
 
 type ProfileQ = {
   id: string;
@@ -22,7 +22,7 @@ type Content = {
   profileQuestions: ProfileQ[];
   quiz: QuizQ[];
   passage: { id: string; text: string } | null;
-  speakingPrompt1: string | null;
+  speakingPrompt: string | null;
   speakingPrompt2: string | null;
   goalsQuestions: ProfileQ[];
 };
@@ -50,17 +50,23 @@ function QuestionField({
   if (q.type === "choice") {
     return (
       <div className="space-y-2">
-        {q.options?.map((opt) => (
-          <button
-            key={opt}
-            onClick={() => onChange(opt)}
-            className={`w-full text-left px-4 py-3 rounded-lg border text-sm ${
-              value === opt ? "border-brand-goldDark bg-brand-goldDark/5 font-semibold" : "border-gray-200"
-            }`}
-          >
-            {opt}
-          </button>
-        ))}
+        {q.options?.map((opt) => {
+          const selected = value === opt;
+          return (
+            <button
+              key={opt}
+              onClick={() => onChange(opt)}
+              className={`w-full flex items-center justify-between text-left px-4 py-3 rounded-lg border-2 text-sm transition-colors ${
+                selected
+                  ? "border-brand-pink bg-brand-gradient text-white font-semibold"
+                  : "border-gray-200 text-gray-800"
+              }`}
+            >
+              <span>{opt}</span>
+              {selected && <span className="ml-2 text-white">✓</span>}
+            </button>
+          );
+        })}
       </div>
     );
   }
@@ -88,67 +94,6 @@ function QuestionField({
   );
 }
 
-// Shared UI for a single speaking-recording step. Used twice (prompt 1 and
-// prompt 2) so the recording/re-record/upload behavior is identical for both.
-function SpeakingStep({
-  title,
-  prompt,
-  recorder,
-  rerecordUsed,
-  onRerecord,
-  onUse
-}: {
-  title: string;
-  prompt: string;
-  recorder: ReturnType<typeof useRecorder>;
-  rerecordUsed: boolean;
-  onRerecord: () => void;
-  onUse: () => void;
-}) {
-  return (
-    <div className="space-y-5">
-      <h2 className="text-lg font-bold">{title}</h2>
-      <div className="bg-white border rounded-xl p-4 text-sm">{prompt}</div>
-      <p className="text-xs text-gray-500">Aim for 60-90 seconds. Speak naturally — there's no wrong answer.</p>
-
-      {recorder.state === "idle" && (
-        <button onClick={recorder.start} className="w-full bg-brand-gradient text-white font-semibold rounded-lg py-3">
-          Start recording
-        </button>
-      )}
-
-      {recorder.state === "recording" && (
-        <div className="text-center space-y-3">
-          <p className={`font-semibold ${recorder.elapsed < 60 ? "text-yellow-600" : "text-green-600"}`}>
-            Recording... {recorder.elapsed}s {recorder.elapsed < 60 && "(aim for at least 60s)"}
-          </p>
-          <button onClick={recorder.stop} className="w-full bg-brand-black text-white font-semibold rounded-lg py-3">
-            Stop
-          </button>
-        </div>
-      )}
-
-      {recorder.state === "stopped" && recorder.blob && (
-        <div className="space-y-3">
-          <audio controls src={URL.createObjectURL(recorder.blob)} className="w-full" />
-          <div className="flex gap-2">
-            {!rerecordUsed && (
-              <button onClick={onRerecord} className="flex-1 border border-gray-300 rounded-lg py-3 text-sm font-semibold">
-                Re-record (1 left)
-              </button>
-            )}
-            <button onClick={onUse} className="flex-1 bg-brand-gradient text-white font-semibold rounded-lg py-3">
-              Use this recording
-            </button>
-          </div>
-        </div>
-      )}
-
-      {recorder.error && <p className="text-sm text-red-500">{recorder.error}</p>}
-    </div>
-  );
-}
-
 export default function AssessmentPage({ params }: { params: { token: string } }) {
   const [content, setContent] = useState<Content | null>(null);
   const [step, setStep] = useState(1);
@@ -161,14 +106,13 @@ export default function AssessmentPage({ params }: { params: { token: string } }
   const [done, setDone] = useState(false);
 
   const passageRecorder = useRecorder();
-  const speakingRecorder1 = useRecorder();
+  const speakingRecorder = useRecorder();
   const speakingRecorder2 = useRecorder();
   const [passageRerecordUsed, setPassageRerecordUsed] = useState(false);
-  const [speakingRerecordUsed1, setSpeakingRerecordUsed1] = useState(false);
+  const [speakingRerecordUsed, setSpeakingRerecordUsed] = useState(false);
   const [speakingRerecordUsed2, setSpeakingRerecordUsed2] = useState(false);
   const [countdown, setCountdown] = useState<number | null>(null);
 
-  // Steps: 1 welcome, 2 profile, 3 quiz, 4 passage, 5 speaking#1, 6 speaking#2, 7 goals, 8 submit.
   const TOTAL_STEPS = 8;
 
   useEffect(() => {
@@ -219,7 +163,7 @@ export default function AssessmentPage({ params }: { params: { token: string } }
     }, 1000);
   }
 
-  async function uploadRecording(kind: "passage" | "speaking1" | "speaking2", blob: Blob) {
+  async function uploadRecording(kind: "passage" | "speaking" | "speaking2", blob: Blob) {
     const form = new FormData();
     form.append("kind", kind);
     form.append("audio", blob, `${kind}.webm`);
@@ -279,7 +223,7 @@ export default function AssessmentPage({ params }: { params: { token: string } }
             <h1 className="text-xl font-bold mb-2">Welcome</h1>
             <p className="text-sm text-gray-500 mb-6">
               This takes about 12 minutes. You'll answer a few questions, take a short grammar quiz, and
-              record a few short audio clips. Make sure you're somewhere reasonably quiet.
+              record two short audio clips. Make sure you're somewhere reasonably quiet.
             </p>
             <button
               onClick={async () => {
@@ -292,7 +236,7 @@ export default function AssessmentPage({ params }: { params: { token: string } }
               Check microphone & start
             </button>
             {micOk === false && (
-              <p className="text-sm text-red-500 mt-3">
+              <p className="text-sm text-brand-pink mt-3">
                 Microphone access is required. Please allow it in your browser settings and try again.
               </p>
             )}
@@ -328,21 +272,27 @@ export default function AssessmentPage({ params }: { params: { token: string } }
               <div key={q.id}>
                 <p className="text-sm font-semibold mb-2">{q.prompt}</p>
                 <div className="space-y-2">
-                  {q.options.map((opt) => (
-                    <button
-                      key={opt.key}
-                      onClick={() => {
-                        const updated = { ...quizAnswers, [q.id]: opt.key };
-                        setQuizAnswers(updated);
-                        autosave({ quiz_answers: updated });
-                      }}
-                      className={`w-full text-left px-4 py-3 rounded-lg border text-sm ${
-                        quizAnswers[q.id] === opt.key ? "border-brand-goldDark bg-brand-goldDark/5 font-semibold" : "border-gray-200"
-                      }`}
-                    >
-                      {opt.text}
-                    </button>
-                  ))}
+                  {q.options.map((opt) => {
+                    const selected = quizAnswers[q.id] === opt.key;
+                    return (
+                      <button
+                        key={opt.key}
+                        onClick={() => {
+                          const updated = { ...quizAnswers, [q.id]: opt.key };
+                          setQuizAnswers(updated);
+                          autosave({ quiz_answers: updated });
+                        }}
+                        className={`w-full flex items-center justify-between text-left px-4 py-3 rounded-lg border-2 text-sm transition-colors ${
+                          selected
+                            ? "border-brand-pink bg-brand-gradient text-white font-semibold"
+                            : "border-gray-200 text-gray-800"
+                        }`}
+                      >
+                        <span>{opt.text}</span>
+                        {selected && <span className="ml-2 text-white">✓</span>}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
             ))}
@@ -392,8 +342,8 @@ export default function AssessmentPage({ params }: { params: { token: string } }
                     </button>
                   )}
                   <button
-                    onClick={async () => {
-                      await uploadRecording("passage", passageRecorder.blob!);
+                    onClick={() => {
+                      uploadRecording("passage", passageRecorder.blob!);
                       next();
                     }}
                     className="flex-1 bg-brand-gradient text-white font-semibold rounded-lg py-3"
@@ -404,42 +354,118 @@ export default function AssessmentPage({ params }: { params: { token: string } }
               </div>
             )}
 
-            {passageRecorder.error && <p className="text-sm text-red-500">{passageRecorder.error}</p>}
+            {passageRecorder.error && <p className="text-sm text-brand-pink">{passageRecorder.error}</p>}
           </div>
         )}
 
-        {step === 5 && content.speakingPrompt1 && (
-          <SpeakingStep
-            title="Speak freely (1 of 2)"
-            prompt={content.speakingPrompt1}
-            recorder={speakingRecorder1}
-            rerecordUsed={speakingRerecordUsed1}
-            onRerecord={() => {
-              setSpeakingRerecordUsed1(true);
-              speakingRecorder1.reset();
-            }}
-            onUse={async () => {
-              await uploadRecording("speaking1", speakingRecorder1.blob!);
-              next();
-            }}
-          />
+        {step === 5 && content.speakingPrompt && (
+          <div className="space-y-5">
+            <h2 className="text-lg font-bold">Speak freely</h2>
+            <div className="bg-white border rounded-xl p-4 text-sm">{content.speakingPrompt}</div>
+            <p className="text-xs text-gray-500">Aim for 60-90 seconds. Speak naturally — there's no wrong answer.</p>
+
+            {speakingRecorder.state === "idle" && (
+              <button onClick={speakingRecorder.start} className="w-full bg-brand-gradient text-white font-semibold rounded-lg py-3">
+                Start recording
+              </button>
+            )}
+
+            {speakingRecorder.state === "recording" && (
+              <div className="text-center space-y-3">
+                <p className={`font-semibold ${speakingRecorder.elapsed < 60 ? "text-yellow-600" : "text-green-600"}`}>
+                  Recording... {speakingRecorder.elapsed}s {speakingRecorder.elapsed < 60 && "(aim for at least 60s)"}
+                </p>
+                <button onClick={speakingRecorder.stop} className="w-full bg-brand-black text-white font-semibold rounded-lg py-3">
+                  Stop
+                </button>
+              </div>
+            )}
+
+            {speakingRecorder.state === "stopped" && speakingRecorder.blob && (
+              <div className="space-y-3">
+                <audio controls src={URL.createObjectURL(speakingRecorder.blob)} className="w-full" />
+                <div className="flex gap-2">
+                  {!speakingRerecordUsed && (
+                    <button
+                      onClick={() => {
+                        setSpeakingRerecordUsed(true);
+                        speakingRecorder.reset();
+                      }}
+                      className="flex-1 border border-gray-300 rounded-lg py-3 text-sm font-semibold"
+                    >
+                      Re-record (1 left)
+                    </button>
+                  )}
+                  <button
+                    onClick={() => {
+                      uploadRecording("speaking", speakingRecorder.blob!);
+                      next();
+                    }}
+                    className="flex-1 bg-brand-gradient text-white font-semibold rounded-lg py-3"
+                  >
+                    Use this recording
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {speakingRecorder.error && <p className="text-sm text-brand-pink">{speakingRecorder.error}</p>}
+          </div>
         )}
 
         {step === 6 && content.speakingPrompt2 && (
-          <SpeakingStep
-            title="Speak freely (2 of 2)"
-            prompt={content.speakingPrompt2}
-            recorder={speakingRecorder2}
-            rerecordUsed={speakingRerecordUsed2}
-            onRerecord={() => {
-              setSpeakingRerecordUsed2(true);
-              speakingRecorder2.reset();
-            }}
-            onUse={async () => {
-              await uploadRecording("speaking2", speakingRecorder2.blob!);
-              next();
-            }}
-          />
+          <div className="space-y-5">
+            <h2 className="text-lg font-bold">Speak freely (part 2)</h2>
+            <div className="bg-white border rounded-xl p-4 text-sm">{content.speakingPrompt2}</div>
+            <p className="text-xs text-gray-500">Aim for 60-90 seconds. Speak naturally — there's no wrong answer.</p>
+
+            {speakingRecorder2.state === "idle" && (
+              <button onClick={speakingRecorder2.start} className="w-full bg-brand-gradient text-white font-semibold rounded-lg py-3">
+                Start recording
+              </button>
+            )}
+
+            {speakingRecorder2.state === "recording" && (
+              <div className="text-center space-y-3">
+                <p className={`font-semibold ${speakingRecorder2.elapsed < 60 ? "text-yellow-600" : "text-green-600"}`}>
+                  Recording... {speakingRecorder2.elapsed}s {speakingRecorder2.elapsed < 60 && "(aim for at least 60s)"}
+                </p>
+                <button onClick={speakingRecorder2.stop} className="w-full bg-brand-black text-white font-semibold rounded-lg py-3">
+                  Stop
+                </button>
+              </div>
+            )}
+
+            {speakingRecorder2.state === "stopped" && speakingRecorder2.blob && (
+              <div className="space-y-3">
+                <audio controls src={URL.createObjectURL(speakingRecorder2.blob)} className="w-full" />
+                <div className="flex gap-2">
+                  {!speakingRerecordUsed2 && (
+                    <button
+                      onClick={() => {
+                        setSpeakingRerecordUsed2(true);
+                        speakingRecorder2.reset();
+                      }}
+                      className="flex-1 border border-gray-300 rounded-lg py-3 text-sm font-semibold"
+                    >
+                      Re-record (1 left)
+                    </button>
+                  )}
+                  <button
+                    onClick={() => {
+                      uploadRecording("speaking2", speakingRecorder2.blob!);
+                      next();
+                    }}
+                    className="flex-1 bg-brand-gradient text-white font-semibold rounded-lg py-3"
+                  >
+                    Use this recording
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {speakingRecorder2.error && <p className="text-sm text-brand-pink">{speakingRecorder2.error}</p>}
+          </div>
         )}
 
         {step === 7 && (
