@@ -51,17 +51,17 @@ export default function TeamPage() {
 
   return (
     <div className="max-w-2xl">
-      <h1 className="text-xl font-bold mb-4">Team</h1>
+      <h1 className="text-xl font-bold text-[#f2ede1] mb-4">Team</h1>
 
-      <form onSubmit={handleInvite} className="bg-white border rounded-xl p-5 space-y-3 mb-6">
-        <p className="text-sm font-semibold">Invite a team member</p>
+      <form onSubmit={handleInvite} className="bg-[#0d0b08] border border-[#221d15] rounded-xl p-5 space-y-3 mb-6">
+        <p className="text-sm font-semibold text-[#f2ede1]">Invite a team member</p>
         <div className="flex gap-3">
           <input
             placeholder="Name"
             value={name}
             onChange={(e) => setName(e.target.value)}
             required
-            className="flex-1 border rounded-lg px-3 py-2 text-sm"
+            className="flex-1 bg-[#161310] border border-[#2a2419] rounded-lg px-3 py-2 text-sm text-[#f2ede1] placeholder:text-[#6b6459]"
           />
           <input
             placeholder="Email"
@@ -69,21 +69,25 @@ export default function TeamPage() {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
-            className="flex-1 border rounded-lg px-3 py-2 text-sm"
+            className="flex-1 bg-[#161310] border border-[#2a2419] rounded-lg px-3 py-2 text-sm text-[#f2ede1] placeholder:text-[#6b6459]"
           />
-          <select value={role} onChange={(e) => setRole(e.target.value)} className="border rounded-lg px-3 py-2 text-sm">
+          <select
+            value={role}
+            onChange={(e) => setRole(e.target.value)}
+            className="bg-[#161310] border border-[#2a2419] rounded-lg px-3 py-2 text-sm text-[#f2ede1]"
+          >
             <option value="counsellor">Counsellor</option>
             <option value="trainer">Trainer</option>
             <option value="admin">Admin</option>
           </select>
         </div>
-        <button className="bg-brand-gradient text-white text-sm font-semibold px-4 py-2 rounded-lg">Invite</button>
-        {status && <p className="text-sm text-gray-600">{status}</p>}
+        <button className="bg-brand-gradient text-brand-black text-sm font-bold px-4 py-2 rounded-lg">Invite</button>
+        {status && <p className="text-sm text-[#9a9282]">{status}</p>}
       </form>
 
-      <div className="bg-white border rounded-xl overflow-hidden">
+      <div className="bg-[#0d0b08] border border-[#221d15] rounded-xl overflow-hidden">
         <table className="w-full text-sm">
-          <thead className="bg-gray-50 text-gray-500 text-xs uppercase">
+          <thead className="bg-[#161310] text-[#7d7568] text-xs uppercase">
             <tr>
               <th className="text-left px-4 py-3">Name</th>
               <th className="text-left px-4 py-3">Email</th>
@@ -92,14 +96,14 @@ export default function TeamPage() {
           </thead>
           <tbody>
             {members.map((m) => (
-              <tr key={m.id} className="border-t">
-                <td className="px-4 py-3">{m.name}</td>
-                <td className="px-4 py-3 text-gray-600">{m.email}</td>
+              <tr key={m.id} className="border-t border-[#1c1712]">
+                <td className="px-4 py-3 text-[#f2ede1]">{m.name}</td>
+                <td className="px-4 py-3 text-[#b8b2a4]">{m.email}</td>
                 <td className="px-4 py-3">
                   <select
                     value={m.role}
                     onChange={(e) => updateRole(m.id, e.target.value)}
-                    className="border rounded-lg px-2 py-1 text-xs"
+                    className="bg-[#161310] border border-[#2a2419] rounded-lg px-2 py-1 text-xs text-[#f2ede1]"
                   >
                     <option value="counsellor">Counsellor</option>
                     <option value="trainer">Trainer</option>
