@@ -9,6 +9,7 @@ export default function NewAssessmentPage() {
   const [link, setLink] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -28,6 +29,13 @@ export default function NewAssessmentPage() {
     } finally {
       setLoading(false);
     }
+  }
+
+  async function handleCopy() {
+    if (!link) return;
+    await navigator.clipboard.writeText(link);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
   }
 
   return (
@@ -83,10 +91,23 @@ export default function NewAssessmentPage() {
               className="flex-1 bg-[#161310] border border-[#2a2419] rounded-lg px-3 py-2 text-sm text-[#f2ede1]"
             />
             <button
-              onClick={() => navigator.clipboard.writeText(link)}
-              className="px-3 py-2 rounded-lg bg-[#161310] border border-[#2a2419] text-[#f2ede1] text-sm"
+              onClick={handleCopy}
+              className={`px-3 py-2 rounded-lg border text-sm flex items-center gap-1.5 transition-colors ${
+                copied
+                  ? "bg-green-950/40 border-green-800 text-green-400"
+                  : "bg-[#161310] border-[#2a2419] text-[#f2ede1]"
+              }`}
             >
-              Copy
+              {copied ? (
+                <>
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                    <polyline points="20 6 9 17 4 12" />
+                  </svg>
+                  Copied!
+                </>
+              ) : (
+                "Copy"
+              )}
             </button>
           </div>
           <a
