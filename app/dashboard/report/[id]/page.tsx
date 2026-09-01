@@ -26,14 +26,19 @@ export default async function ReportPage({ params }: { params: { id: string } })
   if (!a) notFound();
 
   let passageUrl: string | null = null;
-  let speakingUrl: string | null = null;
+  let speakingUrl1: string | null = null;
+  let speakingUrl2: string | null = null;
   if (a.passage_audio_url) {
     const { data } = await db.storage.from("recordings").createSignedUrl(a.passage_audio_url, 3600);
     passageUrl = data?.signedUrl ?? null;
   }
   if (a.speaking_audio_url) {
     const { data } = await db.storage.from("recordings").createSignedUrl(a.speaking_audio_url, 3600);
-    speakingUrl = data?.signedUrl ?? null;
+    speakingUrl1 = data?.signedUrl ?? null;
+  }
+  if (a.speaking_audio_url_2) {
+    const { data } = await db.storage.from("recordings").createSignedUrl(a.speaking_audio_url_2, 3600);
+    speakingUrl2 = data?.signedUrl ?? null;
   }
 
   const report = a.report_json as any;
@@ -75,7 +80,7 @@ export default async function ReportPage({ params }: { params: { id: string } })
         </div>
         <div className="bg-white border rounded-xl p-5 space-y-3">
           <p className="text-sm font-semibold">Recommendation</p>
-          <p className="text-lg font-bold text-brand-pink">{a.recommended_course ?? "—"}</p>
+          <p className="text-lg font-bold text-brand-goldDark">{a.recommended_course ?? "—"}</p>
           {a.alternate_course && <p className="text-xs text-gray-500">Alternate: {a.alternate_course}</p>}
           {report?.why_this_course && <p className="text-sm text-gray-600 mt-2">{report.why_this_course}</p>}
           <div className="pt-3 border-t space-y-1 text-sm text-gray-600">
@@ -141,11 +146,20 @@ export default async function ReportPage({ params }: { params: { id: string } })
             {a.passage_transcript && <p className="text-xs text-gray-500 mt-2">{a.passage_transcript}</p>}
           </div>
         )}
-        {speakingUrl && (
+        {speakingUrl1 && (
           <div className="bg-white border rounded-xl p-4">
-            <p className="text-xs uppercase text-gray-400 mb-2">Open speaking</p>
-            <audio controls src={speakingUrl} className="w-full" />
+            <p className="text-xs uppercase text-gray-400 mb-2">Open speaking (1 of 2)</p>
+            {a.speaking_prompt_1 && <p className="text-xs text-gray-600 italic mb-2">"{a.speaking_prompt_1}"</p>}
+            <audio controls src={speakingUrl1} className="w-full" />
             {a.speaking_transcript && <p className="text-xs text-gray-500 mt-2">{a.speaking_transcript}</p>}
+          </div>
+        )}
+        {speakingUrl2 && (
+          <div className="bg-white border rounded-xl p-4">
+            <p className="text-xs uppercase text-gray-400 mb-2">Open speaking (2 of 2)</p>
+            {a.speaking_prompt_2 && <p className="text-xs text-gray-600 italic mb-2">"{a.speaking_prompt_2}"</p>}
+            <audio controls src={speakingUrl2} className="w-full" />
+            {a.speaking_transcript_2 && <p className="text-xs text-gray-500 mt-2">{a.speaking_transcript_2}</p>}
           </div>
         )}
       </div>
