@@ -58,26 +58,10 @@ export async function POST(req: NextRequest, { params }: { params: { token: stri
       transcribeAudio(Buffer.from(speakingBuf2), "speaking2.webm")
     ]);
 
-    function durationOf(words: { start: number; end: number }[]) {
-      return words.length > 0 ? words[words.length - 1].end - words[0].start : 0;
-    }
-    const speakingDuration = durationOf(speakingTranscription.words) + durationOf(speakingTranscription2.words);
-
-    if (speakingDuration < 30) {
-      await db
-        .from("assessments")
-        .update({
-          status: "insufficient_sample",
-          passage_transcript: passageTranscription.text,
-          speaking_transcript: speakingTranscription.text,
-          speaking_transcript_2: speakingTranscription2.text,
-          passage_words: passageTranscription.words,
-          speaking_words: speakingTranscription.words,
-          speaking_words_2: speakingTranscription2.words
-        })
-        .eq("token", params.token);
-      return NextResponse.json({ status: "insufficient_sample" });
-    }
+    // Score with whatever was actually recorded — no minimum duration
+    // requirement. A very short or silent recording will simply produce a
+    // low fluency/intelligibility score rather than being blocked outright,
+    // so every submitted assessment gets a real report.
 
     const content = assessment.content_versions?.content;
     const passage = (content?.passages ?? []).find((p: any) => p.id === assessment.passage_id) ?? content?.passages?.[0];
