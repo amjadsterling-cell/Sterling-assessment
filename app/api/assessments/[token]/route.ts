@@ -79,6 +79,13 @@ export async function PATCH(req: NextRequest, { params }: { params: { token: str
   for (const [key, value] of Object.entries(body)) {
     if (ALLOWED_FIELDS.has(key)) update[key] = value;
   }
+
+  // Status is handled separately: a lead's own progress ping may only move
+  // it to "started" or "recording", never to anything scored/complete.
+  const SAFE_STATUSES = new Set(["started", "recording"]);
+  if (typeof body.status === "string" && SAFE_STATUSES.has(body.status)) {
+    update.status = body.status;
+  }
   if (Object.keys(update).length === 0) {
     return NextResponse.json({ error: "No valid fields to update" }, { status: 400 });
   }
