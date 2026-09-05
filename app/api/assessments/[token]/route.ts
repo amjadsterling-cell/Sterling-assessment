@@ -1,90 +1,184 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
+import { transcribeAudio } from "@/lib/transcribe";
+import { runScoringEngine, overallScoreToCEFR } from "@/lib/scoring";
+import { generateReport } from "@/lib/report";
+import { routeToCourse } from "@/lib/routing";
 
-// Fields a lead is allowed to write via autosave. Never let this route touch
-// scores, status transitions beyond "started", or anything computed.
-const ALLOWED_FIELDS = new Set([
-  "age_range",
-  "occupation",
-  "mother_tongue",
-  "years_english_use",
-  "self_rated_fluency",
-  "biggest_struggle",
-  "quiz_answers",
-  "quiz_score",
-  "goal",
-  "budget_range",
-  "availability",
-  "class_format",
-  "current_step"
-]);
-
-export async function GET(_req: NextRequest, { params }: { params: { token: string } }) {
+export async function POST(req: NextRequest, { params }: { params: { token: string } }) {
+  const body = await req.json().catch(() => ({}));
   const db = supabaseAdmin();
-  const { data: assessment, error } = await db
+
+  const { data: assessment, error: fetchErr } = await db
     .from("assessments")
     .select("*, content_versions(content)")
     .eq("token", params.token)
     .maybeSingle();
 
-  if (error || !assessment) {
+  if (fetchErr || !assessment) {
     return NextResponse.json({ error: "Assessment not found" }, { status: 404 });
   }
 
-  if (assessment.status === "sent") {
-    await db.from("assessments").update({ status: "started" }).eq("token", params.token);
+  // Final goals/budget fields come in on submit, same allow-list discipline as PATCH.
+  const finalFields: Record<string, unknown> = {};
+  for (const key of ["goal", "budget_range", "availability", "class_format"]) {
+    if (body[key] !== undefined) finalFields[key] = body[key];
   }
 
-  const content = assessment.content_versions?.content;
-  const passage = (content?.passages ?? []).find((p: any) => p.id === assessment.passage_id) ?? content?.passages?.[0];
-  const prompts = content?.speakingPrompts ?? [];
-  const idx1 = prompts.length ? Math.floor(Math.random() * prompts.length) : -1;
-  let idx2 = idx1;
-  if (prompts.length > 1) {
-    while (idx2 === idx1) idx2 = Math.floor(Math.random() * prompts.length);
-  }
-  const speakingPrompt = idx1 >= 0 ? prompts[idx1] : null;
-  const speakingPrompt2 = idx2 >= 0 ? prompts[idx2] : null;
+  await db
+    .from("assessments")
+    .update({ ...finalFields, status: "processing" })
+    .eq("token", params.token);
 
-  return NextResponse.json({
-    status: assessment.status,
-    current_step: assessment.current_step,
-    saved: {
-      age_range: assessment.age_range,
-      occupation: assessment.occupation,
-      mother_tongue: assessment.mother_tongue,
-      years_english_use: assessment.years_english_use,
-      self_rated_fluency: assessment.self_rated_fluency,
-      biggest_struggle: assessment.biggest_struggle,
-      quiz_answers: assessment.quiz_answers,
-      goal: assessment.goal,
-      budget_range: assessment.budget_range,
-      availability: assessment.availability,
-      class_format: assessment.class_format
-    },
-    content: {
-      profileQuestions: content?.profileQuestions ?? [],
-      quiz: content?.quiz ?? [],
-      passage,
-      speakingPrompt,
-      speakingPrompt2,
-      goalsQuestions: content?.goalsQuestions ?? []
+  if (!assessment.passage_audio_url || !assessment.speaking_audio_url || !assessment.speaking_audio_url_2) {
+    await db.from("assessments").update({ status: "failed", report_error: "Missing recordings" }).eq("token", params.token);
+    return NextResponse.json({ error: "Missing recordings" }, { status: 400 });
+  }
+
+  try {
+    const [passageFile, speakingFile, speakingFile2] = await Promise.all([
+      db.storage.from("recordings").download(assessment.passage_audio_url),
+      db.storage.from("recordings").download(assessment.speaking_audio_url),
+      db.storage.from("recordings").download(assessment.speaking_audio_url_2)
+    ]);
+
+    if (passageFile.error || speakingFile.error || speakingFile2.error) {
+      throw new Error("Could not read recordings from storage");
     }
-  });
-}
 
-export async function PATCH(req: NextRequest, { params }: { params: { token: string } }) {
-  const body = await req.json();
-  const update: Record<string, unknown> = {};
-  for (const [key, value] of Object.entries(body)) {
-    if (ALLOWED_FIELDS.has(key)) update[key] = value;
-  }
-  if (Object.keys(update).length === 0) {
-    return NextResponse.json({ error: "No valid fields to update" }, { status: 400 });
-  }
+    const [passageBuf, speakingBuf, speakingBuf2] = await Promise.all([
+      passageFile.data.arrayBuffer(),
+      speakingFile.data.arrayBuffer(),
+      speakingFile2.data.arrayBuffer()
+    ]);
 
-  const db = supabaseAdmin();
-  const { error } = await db.from("assessments").update(update).eq("token", params.token);
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  return NextResponse.json({ ok: true });
+    const [passageTranscription, speakingTranscription, speakingTranscription2] = await Promise.all([
+      transcribeAudio(Buffer.from(passageBuf), "passage.webm"),
+      transcribeAudio(Buffer.from(speakingBuf), "speaking.webm"),
+      transcribeAudio(Buffer.from(speakingBuf2), "speaking2.webm")
+    ]);
+
+    // Score with whatever was actually recorded — no minimum duration
+    // requirement. A very short or silent recording will simply produce a
+    // low fluency/intelligibility score rather than being blocked outright,
+    // so every submitted assessment gets a real report.
+
+    const content = assessment.content_versions?.content;
+    const passage = (content?.passages ?? []).find((p: any) => p.id === assessment.passage_id) ?? content?.passages?.[0];
+    const quiz = content?.quiz ?? [];
+
+    const quizAnswers = (assessment.quiz_answers as Record<string, string>) ?? {};
+    let correct = 0;
+    const quizErrors: { prompt: string; chosen: string; correct: string; tests: string }[] = [];
+    for (const q of quiz) {
+      const chosen = quizAnswers[q.id];
+      if (chosen === q.correct) {
+        correct++;
+      } else {
+        quizErrors.push({ prompt: q.prompt, chosen: chosen ?? "(no answer)", correct: q.correct, tests: q.tests });
+      }
+    }
+    const quizScorePct = quiz.length ? Math.round((correct / quiz.length) * 100) : 0;
+
+    // Provisional scoring pass to feed metrics/missed-words into the LLM prompt,
+    // using neutral placeholders for the two LLM-rated dimensions.
+    const provisional = runScoringEngine({
+      passageTranscript: passageTranscription.text,
+      passage,
+      passageWords: passageTranscription.words,
+      speakingWords1: speakingTranscription.words,
+      speakingWords2: speakingTranscription2.words,
+      quizScore: quizScorePct,
+      speechGrammarRating: 60,
+      vocabularyRating: 60
+    });
+
+    let report;
+    let reportError: string | null = null;
+    try {
+      report = await generateReport({
+        profile: {
+          age_range: assessment.age_range,
+          occupation: assessment.occupation,
+          mother_tongue: assessment.mother_tongue,
+          years_english_use: assessment.years_english_use,
+          self_rated_fluency: assessment.self_rated_fluency,
+          biggest_struggle: assessment.biggest_struggle
+        },
+        quizErrors,
+        passageTranscript: passageTranscription.text,
+        speakingTranscript: `${speakingTranscription.text}\n\n${speakingTranscription2.text}`,
+        missedTargetWords: provisional.metrics.missedTargetWords as string[],
+        metrics: provisional.metrics,
+        scores: {
+          intelligibility_score: provisional.intelligibility_score,
+          rhythm_score: provisional.rhythm_score,
+          fluency_score: provisional.fluency_score,
+          grammar_score: provisional.grammar_score,
+          vocabulary_score: provisional.vocabulary_score,
+          overall_score: provisional.overall_score,
+          cefr_fallback: provisional.cefr_fallback
+        }
+      });
+    } catch (err: any) {
+      reportError = err.message ?? "LLM report generation failed";
+    }
+
+    // Final scoring pass using the LLM's actual grammar/vocab ratings, if we got one.
+    const final = runScoringEngine({
+      passageTranscript: passageTranscription.text,
+      passage,
+      passageWords: passageTranscription.words,
+      speakingWords1: speakingTranscription.words,
+      speakingWords2: speakingTranscription2.words,
+      quizScore: quizScorePct,
+      speechGrammarRating: report?.speech_grammar_rating ?? 60,
+      vocabularyRating: report?.vocabulary_rating ?? 60
+    });
+
+    const cefr = report?.cefr_level ?? overallScoreToCEFR(final.overall_score);
+    const routing = routeToCourse({
+      cefr,
+      fluency_score: final.fluency_score,
+      rhythm_score: final.rhythm_score,
+      intelligibility_score: final.intelligibility_score,
+      preferredFormat: (finalFields.class_format as string) ?? assessment.class_format,
+      courses: content?.courses ?? []
+    });
+
+    await db
+      .from("assessments")
+      .update({
+        quiz_score: quizScorePct,
+        passage_transcript: passageTranscription.text,
+        speaking_transcript: speakingTranscription.text,
+        speaking_transcript_2: speakingTranscription2.text,
+        passage_words: passageTranscription.words,
+        speaking_words: speakingTranscription.words,
+        speaking_words_2: speakingTranscription2.words,
+        intelligibility_score: final.intelligibility_score,
+        rhythm_score: final.rhythm_score,
+        fluency_score: final.fluency_score,
+        grammar_score: final.grammar_score,
+        vocabulary_score: final.vocabulary_score,
+        overall_score: final.overall_score,
+        metrics: final.metrics,
+        recommended_course: routing.recommended,
+        alternate_course: routing.alternate,
+        report_json: report ?? null,
+        report_summary: report?.headline ?? null,
+        report_error: reportError,
+        status: "complete",
+        completed_at: new Date().toISOString()
+      })
+      .eq("token", params.token);
+
+    return NextResponse.json({ status: "complete", reportError });
+  } catch (err: any) {
+    await db
+      .from("assessments")
+      .update({ status: "failed", report_error: err.message ?? "Unknown error" })
+      .eq("token", params.token);
+    return NextResponse.json({ error: err.message ?? "Processing failed" }, { status: 500 });
+  }
 }
