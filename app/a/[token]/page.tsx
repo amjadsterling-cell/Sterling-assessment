@@ -145,7 +145,11 @@ export default function AssessmentPage({ params }: { params: { token: string } }
   }
 
   function next() {
-    setStep((s) => Math.min(s + 1, TOTAL_STEPS));
+    setStep((s) => {
+      const nextStep = Math.min(s + 1, TOTAL_STEPS);
+      autosave({ current_step: nextStep, status: nextStep >= TOTAL_STEPS ? "recording" : "started" });
+      return nextStep;
+    });
   }
 
   async function startPassageCountdown() {
