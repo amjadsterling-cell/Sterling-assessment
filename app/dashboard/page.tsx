@@ -176,13 +176,13 @@ export default async function DashboardPage({
         </div>
 
         <div className="flex gap-2">
-          <button type="submit" className="h-10 bg-brand-gradient text-white text-sm font-semibold px-4 rounded-lg">
+          <button type="submit" className="h-8 bg-brand-gradient text-white text-xs font-semibold px-3 rounded-lg">
             Filter
           </button>
           {hasActiveFilters && (
             <Link
               href="/dashboard"
-              className="h-10 flex items-center text-sm font-semibold px-4 rounded-lg border border-white/15 text-gray-300 hover:bg-white/5"
+              className="h-8 flex items-center text-xs font-semibold px-3 rounded-lg border border-white/15 text-gray-300 hover:bg-white/5"
             >
               Clear
             </Link>
@@ -208,7 +208,7 @@ export default async function DashboardPage({
             {(assessments ?? []).map((a: any) => (
               <tr key={a.id} className="border-t border-white/5 hover:bg-white/5">
                 <td className="px-4 py-3">
-                  <Link href={`/dashboard/report/${a.id}`} className="font-medium text-brand-pink">
+                  <Link href={`/dashboard/report/${a.id}`} className="font-medium text-white hover:underline">
                     {a.leads?.name ?? "—"}
                   </Link>
                 </td>
