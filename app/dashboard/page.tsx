@@ -107,9 +107,22 @@ export default async function DashboardPage({
     <div>
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-xl font-bold text-white">Dashboard</h1>
-        <Link href="/dashboard/new" className="bg-brand-gradient text-white text-sm font-semibold px-4 py-2 rounded-lg">
-          + New assessment
-        </Link>
+        <div className="flex items-center gap-3">
+          <a
+            href={`/api/dashboard/export?${new URLSearchParams({
+              ...(counsellorFilter && { counsellor: counsellorFilter }),
+              ...(statusFilter && { status: statusFilter }),
+              ...(dateFilter && { date: dateFilter }),
+              ...(q && { q })
+            }).toString()}`}
+            className="text-sm font-semibold px-4 py-2 rounded-lg border border-white/15 text-gray-200 hover:bg-white/5"
+          >
+            Download CSV
+          </a>
+          <Link href="/dashboard/new" className="bg-brand-gradient text-white text-sm font-semibold px-4 py-2 rounded-lg">
+            + New assessment
+          </Link>
+        </div>
       </div>
 
       <div className="grid grid-cols-4 gap-4 mb-6">
@@ -120,13 +133,13 @@ export default async function DashboardPage({
       </div>
 
       <form method="get" className="bg-white/5 rounded-xl border border-white/10 p-4 mb-4 flex flex-wrap items-end gap-3">
-        <div className="flex-1 min-w-[180px]">
+        <div className="w-56">
           <label className="text-xs text-gray-400 block mb-1">Search (name or phone)</label>
           <input
             type="text"
             name="q"
             defaultValue={q}
-            placeholder="e.g. Amjad or 8590..."
+            placeholder="Search..."
             className="w-full h-10 bg-white/5 border border-white/15 rounded-lg px-3 text-sm text-white placeholder:text-gray-500"
           />
         </div>
