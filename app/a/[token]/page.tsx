@@ -182,7 +182,8 @@ export default function AssessmentPage({ params }: { params: { token: string } }
     fetch(`/api/assessments/${params.token}/submit`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(goals)
+      body: JSON.stringify(goals),
+      keepalive: true
     }).catch(() => {});
     setDone(true);
   }
