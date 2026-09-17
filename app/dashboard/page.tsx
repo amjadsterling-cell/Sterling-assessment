@@ -12,7 +12,7 @@ function StatCard({ label, value }: { label: string; value: number | string }) {
   );
 }
 
-const STATUS_OPTIONS = ["sent", "started", "recording", "processing", "complete", "insufficient_sample", "failed"];
+const STATUS_OPTIONS = ["sent", "started", "recording", "processing", "complete", "complete_partial", "insufficient_sample", "failed"];
 const TOTAL_STEPS = 8; // keep in sync with app/a/[token]/page.tsx
 
 function statusBadge(status: string) {
@@ -22,6 +22,7 @@ function statusBadge(status: string) {
     recording: "bg-yellow-400/15 text-yellow-300",
     processing: "bg-blue-400/15 text-blue-300",
     complete: "bg-green-400/15 text-green-300",
+    complete_partial: "bg-orange-400/15 text-orange-300",
     insufficient_sample: "bg-orange-400/15 text-orange-300",
     failed: "bg-red-400/15 text-red-300"
   };
@@ -98,7 +99,8 @@ export default async function DashboardPage({
   const inProgress = assessments?.filter((a) => ["started", "recording", "processing"].includes(a.status)).length ?? 0;
   const completedToday =
     assessments?.filter((a) => a.completed_at && a.completed_at.slice(0, 10) === today).length ?? 0;
-  const completeCount = assessments?.filter((a) => a.status === "complete").length ?? 0;
+  const completeCount =
+    assessments?.filter((a) => a.status === "complete" || a.status === "complete_partial").length ?? 0;
   const conversion = sentCount ? Math.round((completeCount / sentCount) * 100) : 0;
 
   const hasActiveFilters = counsellorFilter || statusFilter || dateFilter || q;
@@ -229,7 +231,7 @@ export default async function DashboardPage({
                 {isAdmin && <td className="px-4 py-3 text-gray-300">{a.leads?.counsellors?.name ?? "—"}</td>}
                 <td className="px-4 py-3">
                   {statusBadge(a.status)}
-                  {a.status !== "complete" && a.status !== "processing" && (
+                  {a.status !== "complete" && a.status !== "complete_partial" && a.status !== "processing" && (
                     <span className="ml-1.5 text-xs text-gray-500">
                       ({Math.round(((a.current_step ?? 1) / TOTAL_STEPS) * 100)}%)
                     </span>
