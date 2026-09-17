@@ -13,7 +13,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
     <div className="min-h-screen flex">
       <aside className="w-56 shrink-0 bg-brand-black text-white flex flex-col print:hidden">
         <div className="p-5">
-          <img src="/logo-white.png" alt="Sterling" className="h-9 w-auto mb-4" />
+          <img src="/logo.png" alt="Sterling" className="h-9 w-auto mb-4" />
           <p className="font-heading font-bold text-sm leading-tight">Spoken English</p>
           <p className="text-xs text-gray-400">Assessment console</p>
         </div>
