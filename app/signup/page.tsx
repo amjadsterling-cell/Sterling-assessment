@@ -51,6 +51,7 @@ export default function SignupPage() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
       <div className="w-full max-w-sm bg-white rounded-2xl shadow-md p-8">
+        <img src="/logo.png" alt="Sterling" className="h-8 w-auto mb-4" />
         <div className="w-full h-1.5 rounded-full bg-brand-gradient mb-6" />
         <h1 className="text-2xl font-bold mb-1">Create account</h1>
         <p className="text-sm text-gray-500 mb-6">Spoken English Assessment</p>
