@@ -16,20 +16,21 @@ export async function GET(req: NextRequest) {
   const db = supabaseAdmin();
   const results = { reportsHealed: 0, reportsStillFailing: 0, recordingsDeleted: 0, stuckSubmissionsRetried: 0, stuckSubmissionsFailed: 0 };
 
-  // 0. Catch assessments stuck at "recording" or "processing" that have all
-  //    three recordings uploaded but never actually got scored — typically
-  //    because the lead closed their browser right after tapping Submit,
-  //    before the request finished. Only touch ones at least 15 minutes old
-  //    so we don't race an assessment that's still genuinely mid-flight.
-  const staleCutoff = new Date(Date.now() - 15 * 60 * 1000).toISOString();
+  // 0. Catch assessments that never reached a final status — either stuck
+  //    at "recording"/"processing" right after the lead tapped Submit (their
+  //    browser closed before the request finished), or genuinely abandoned
+  //    part-way through ("sent"/"started") and never coming back. Either
+  //    way, once enough time has passed that they're clearly not still
+  //    active, force a report from whatever they actually did — a missing
+  //    recording or unanswered quiz just scores as empty/zero rather than
+  //    blocking the report entirely. 60 minutes is comfortably past the
+  //    ~12-minute expected flow, so we don't race a lead still mid-attempt.
+  const staleCutoff = new Date(Date.now() - 60 * 60 * 1000).toISOString();
   const { data: stuck } = await db
     .from("assessments")
     .select("token")
-    .in("status", ["recording", "processing"])
-    .lt("created_at", staleCutoff)
-    .not("passage_audio_url", "is", null)
-    .not("speaking_audio_url", "is", null)
-    .not("speaking_audio_url_2", "is", null);
+    .in("status", ["sent", "started", "recording", "processing"])
+    .lt("created_at", staleCutoff);
 
   for (const a of stuck ?? []) {
     try {
