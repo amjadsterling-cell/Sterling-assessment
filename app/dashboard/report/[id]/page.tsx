@@ -56,7 +56,14 @@ export default async function ReportPage({ params }: { params: { id: string } })
         </div>
       </div>
 
-      {a.status !== "complete" && (
+      {a.status === "complete_partial" && (
+        <div className="mb-6 p-4 rounded-lg bg-orange-50 text-orange-800 text-sm">
+          This candidate didn't finish the full assessment. Scores below reflect only what they actually
+          recorded/answered before leaving.
+        </div>
+      )}
+
+      {a.status !== "complete" && a.status !== "complete_partial" && (
         <div className="mb-6 p-4 rounded-lg bg-yellow-50 text-yellow-800 text-sm">
           Status: {a.status.replace("_", " ")}. Scores/report may still be processing.
         </div>
