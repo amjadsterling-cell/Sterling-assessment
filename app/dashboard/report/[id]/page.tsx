@@ -42,7 +42,7 @@ export default async function ReportPage({ params }: { params: { id: string } })
   return (
     <div className="max-w-3xl print:bg-white print:text-black">
       <div className="flex items-center justify-between mb-4">
-        <img src="/logo-dark.png" alt="Sterling" className="h-8 w-auto print:h-10" />
+        <img src="/logo.png" alt="Sterling" className="h-8 w-auto print:h-10" />
         <DownloadReportButton />
       </div>
       <div className="flex items-center justify-between mb-6">
