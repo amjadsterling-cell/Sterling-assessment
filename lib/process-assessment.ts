@@ -4,11 +4,16 @@ import { runScoringEngine, overallScoreToCEFR } from "@/lib/scoring";
 import { generateReport } from "@/lib/report";
 import { routeToCourse } from "@/lib/routing";
 
+const EMPTY_TRANSCRIPTION = { text: "", words: [] as { start: number; end: number; word: string }[] };
+
 // The full transcribe -> score -> generate-report -> save pipeline for one
 // assessment. Used by both the lead-facing submit route (right after they
-// finish) and the self-heal cron (to catch anything that got stuck at
-// "recording"/"processing" without ever completing, e.g. because the lead
-// closed their browser mid-submit).
+// finish) and the self-heal cron (to catch anything that never completed,
+// e.g. the lead closed their browser mid-submit, or abandoned partway
+// through). Every recording is optional here on purpose: whichever ones
+// exist get transcribed and scored, whichever don't are treated as silence
+// (an empty transcript, 0 words) rather than blocking the whole report. A
+// lead who never speaks a word still gets a real report reflecting that.
 export async function processAssessment(token: string, extraFields: Record<string, unknown> = {}) {
   const db = supabaseAdmin();
 
@@ -27,11 +32,6 @@ export async function processAssessment(token: string, extraFields: Record<strin
     .update({ ...extraFields, status: "processing" })
     .eq("token", token);
 
-  if (!assessment.passage_audio_url || !assessment.speaking_audio_url || !assessment.speaking_audio_url_2) {
-    await db.from("assessments").update({ status: "failed", report_error: "Missing recordings" }).eq("token", token);
-    throw new Error("Missing recordings");
-  }
-
   try {
     return await runPipeline(db, token, assessment, extraFields);
   } catch (err: any) {
@@ -43,32 +43,30 @@ export async function processAssessment(token: string, extraFields: Record<strin
   }
 }
 
-async function runPipeline(db: ReturnType<typeof supabaseAdmin>, token: string, assessment: any, extraFields: Record<string, unknown>) {
-  const [passageFile, speakingFile, speakingFile2] = await Promise.all([
-    db.storage.from("recordings").download(assessment.passage_audio_url),
-    db.storage.from("recordings").download(assessment.speaking_audio_url),
-    db.storage.from("recordings").download(assessment.speaking_audio_url_2)
-  ]);
-
-  if (passageFile.error || speakingFile.error || speakingFile2.error) {
-    throw new Error("Could not read recordings from storage");
+async function downloadAndTranscribe(db: ReturnType<typeof supabaseAdmin>, url: string | null, filename: string) {
+  if (!url) return EMPTY_TRANSCRIPTION;
+  const file = await db.storage.from("recordings").download(url);
+  if (file.error || !file.data) return EMPTY_TRANSCRIPTION;
+  const buf = await file.data.arrayBuffer();
+  try {
+    return await transcribeAudio(Buffer.from(buf), filename);
+  } catch {
+    return EMPTY_TRANSCRIPTION;
   }
+}
 
-  const [passageBuf, speakingBuf, speakingBuf2] = await Promise.all([
-    passageFile.data.arrayBuffer(),
-    speakingFile.data.arrayBuffer(),
-    speakingFile2.data.arrayBuffer()
-  ]);
-
+async function runPipeline(db: ReturnType<typeof supabaseAdmin>, token: string, assessment: any, extraFields: Record<string, unknown>) {
   const [passageTranscription, speakingTranscription, speakingTranscription2] = await Promise.all([
-    transcribeAudio(Buffer.from(passageBuf), "passage.webm"),
-    transcribeAudio(Buffer.from(speakingBuf), "speaking.webm"),
-    transcribeAudio(Buffer.from(speakingBuf2), "speaking2.webm")
+    downloadAndTranscribe(db, assessment.passage_audio_url, "passage.webm"),
+    downloadAndTranscribe(db, assessment.speaking_audio_url, "speaking.webm"),
+    downloadAndTranscribe(db, assessment.speaking_audio_url_2, "speaking2.webm")
   ]);
 
-  // Score with whatever was actually recorded — no minimum duration
-  // requirement. A very short or silent recording simply produces a low
-  // fluency/intelligibility score rather than being blocked outright.
+  // Score with whatever was actually recorded — no minimum duration or
+  // recording-count requirement. A candidate who barely spoke, or never
+  // reached the recording steps at all, simply produces a low or zero
+  // fluency/intelligibility score rather than being blocked outright, so
+  // every assessment — complete or abandoned — gets a real report.
 
   const content = assessment.content_versions?.content;
   const passage = (content?.passages ?? []).find((p: any) => p.id === assessment.passage_id) ?? content?.passages?.[0];
@@ -150,6 +148,9 @@ async function runPipeline(db: ReturnType<typeof supabaseAdmin>, token: string, 
     courses: content?.courses ?? []
   });
 
+  const incomplete =
+    !assessment.passage_audio_url || !assessment.speaking_audio_url || !assessment.speaking_audio_url_2;
+
   await db
     .from("assessments")
     .update({
@@ -172,10 +173,13 @@ async function runPipeline(db: ReturnType<typeof supabaseAdmin>, token: string, 
       report_json: report ?? null,
       report_summary: report?.headline ?? null,
       report_error: reportError,
-      status: "complete",
+      // A report generated from partial data (candidate abandoned before
+      // recording everything) is marked distinctly so it's easy to spot
+      // on the dashboard, rather than looking identical to a full run.
+      status: incomplete ? "complete_partial" : "complete",
       completed_at: new Date().toISOString()
     })
     .eq("token", token);
 
-  return { status: "complete", reportError };
+  return { status: incomplete ? "complete_partial" : "complete", reportError };
 }
