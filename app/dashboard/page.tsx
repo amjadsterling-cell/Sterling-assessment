@@ -37,7 +37,7 @@ function statusBadge(status: string) {
 export default async function DashboardPage({
   searchParams
 }: {
-  searchParams: { counsellor?: string; status?: string; date?: string; q?: string; month?: string };
+  searchParams: { counsellor?: string; status?: string; date?: string; q?: string };
 }) {
   const counsellor = await getCurrentCounsellor();
   const db = supabaseAdmin();
@@ -57,44 +57,6 @@ export default async function DashboardPage({
     const { data } = await db.from("counsellors").select("id, name").order("name");
     counsellorOptions = data ?? [];
   }
-
-  // Month navigator for the stat cards — independent of the table's own
-  // filters below. Defaults to the current month.
-  const now = new Date();
-  const monthParam = searchParams.month ?? `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
-  const [monthYear, monthNum] = monthParam.split("-").map(Number);
-  const monthStart = new Date(Date.UTC(monthYear, monthNum - 1, 1));
-  const monthEnd = new Date(Date.UTC(monthYear, monthNum, 1));
-  const prevMonth = new Date(Date.UTC(monthYear, monthNum - 2, 1));
-  const nextMonth = new Date(Date.UTC(monthYear, monthNum, 1));
-  const fmtMonth = (d: Date) => `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
-  const monthLabel = monthStart.toLocaleDateString("en-US", { month: "long", year: "numeric", timeZone: "UTC" });
-
-  let monthLeadsQuery = db
-    .from("leads")
-    .select("id", { count: "exact", head: true })
-    .gte("created_at", monthStart.toISOString())
-    .lt("created_at", monthEnd.toISOString());
-  if (!isAdmin && counsellor) monthLeadsQuery = monthLeadsQuery.eq("counsellor_id", counsellor.id);
-  const { count: monthLeadsCount } = await monthLeadsQuery;
-
-  let monthAssessmentsQuery = db
-    .from("assessments")
-    .select("status, completed_at, leads!inner(counsellor_id)")
-    .gte("created_at", monthStart.toISOString())
-    .lt("created_at", monthEnd.toISOString());
-  if (!isAdmin && counsellor) monthAssessmentsQuery = monthAssessmentsQuery.eq("leads.counsellor_id", counsellor.id);
-  const { data: monthAssessments } = await monthAssessmentsQuery;
-
-  const today = new Date().toISOString().slice(0, 10);
-  const monthSent = monthAssessments?.length ?? 0;
-  const monthInProgress =
-    monthAssessments?.filter((a) => ["started", "recording", "processing"].includes(a.status)).length ?? 0;
-  const monthCompletedToday =
-    monthAssessments?.filter((a) => a.completed_at && a.completed_at.slice(0, 10) === today).length ?? 0;
-  const monthCompleteCount =
-    monthAssessments?.filter((a) => a.status === "complete" || a.status === "complete_partial").length ?? 0;
-  const monthConversion = monthSent ? Math.round((monthCompleteCount / monthSent) * 100) : 0;
 
   let query = db
     .from("assessments")
@@ -157,42 +119,11 @@ export default async function DashboardPage({
         </div>
       </div>
 
-      <div className="flex items-center justify-between mb-3">
-        <div className="flex items-center gap-2">
-          <Link
-            href={`/dashboard?${new URLSearchParams({
-              ...(counsellorFilter && { counsellor: counsellorFilter }),
-              ...(statusFilter && { status: statusFilter }),
-              ...(dateFilter && { date: dateFilter }),
-              ...(q && { q }),
-              month: fmtMonth(prevMonth)
-            }).toString()}`}
-            className="w-7 h-7 flex items-center justify-center rounded-full bg-white/5 border border-white/10 text-gray-300 hover:bg-white/10"
-          >
-            ‹
-          </Link>
-          <h2 className="text-base font-bold text-white">{monthLabel}</h2>
-          <Link
-            href={`/dashboard?${new URLSearchParams({
-              ...(counsellorFilter && { counsellor: counsellorFilter }),
-              ...(statusFilter && { status: statusFilter }),
-              ...(dateFilter && { date: dateFilter }),
-              ...(q && { q }),
-              month: fmtMonth(nextMonth)
-            }).toString()}`}
-            className="w-7 h-7 flex items-center justify-center rounded-full bg-white/5 border border-white/10 text-gray-300 hover:bg-white/10"
-          >
-            ›
-          </Link>
-        </div>
-        <span className="text-xs text-gray-500">{monthLeadsCount ?? 0} leads</span>
-      </div>
-
       <div className="grid grid-cols-4 gap-4 mb-6">
-        <StatCard label="Sent" value={monthSent} />
-        <StatCard label="In progress" value={monthInProgress} />
-        <StatCard label="Completed today" value={monthCompletedToday} />
-        <StatCard label="Conversion" value={`${monthConversion}%`} />
+        <StatCard label="Sent" value={sentCount} />
+        <StatCard label="In progress" value={inProgress} />
+        <StatCard label="Completed today" value={completedToday} />
+        <StatCard label="Conversion" value={`${conversion}%`} />
       </div>
 
       <form method="get" className="bg-white/5 rounded-xl border border-white/10 p-4 mb-4 flex flex-wrap items-end gap-3">
