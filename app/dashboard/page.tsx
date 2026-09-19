@@ -95,6 +95,15 @@ export default async function DashboardPage({
 
   const { data: assessments } = await query;
 
+  const today = new Date().toISOString().slice(0, 10);
+  const sentCount = assessments?.length ?? 0;
+  const inProgress = assessments?.filter((a) => ["started", "recording", "processing"].includes(a.status)).length ?? 0;
+  const completedToday =
+    assessments?.filter((a) => a.completed_at && a.completed_at.slice(0, 10) === today).length ?? 0;
+  const completeCount =
+    assessments?.filter((a) => a.status === "complete" || a.status === "complete_partial").length ?? 0;
+  const conversion = sentCount ? Math.round((completeCount / sentCount) * 100) : 0;
+
   const hasActiveFilters = counsellorFilter || statusFilter || dateFilter || q;
 
   return (
