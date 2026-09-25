@@ -10,7 +10,7 @@ export type ReportStudent = {
   name: string;
   contact?: string; // phone or email, if available
   cefrLevel: string; // A1..C2
-  status: "complete" | "complete_partial" | "processing" | "insufficient_sample";
+  status: string; // whatever the assessments.status column holds
   assessmentDate: string; // ISO date
   overallScore: number;
 };
@@ -63,31 +63,32 @@ export type SpeechAnalysis = {
 };
 
 export type PronunciationPattern = {
-  word: string;
-  whatWasSaid: string;
-  expectedForm: string;
-  possiblePattern: string;
-  recommendedPractice: string;
+  word?: string;
+  whatWasSaid?: string;
+  expectedForm?: string;
+  possiblePattern?: string;
+  recommendedPractice?: string;
+  note?: string; // used when only a prose description is available (current Gemini output)
 };
 
 export type GrammarIssue = {
   title: string;
-  score: number;
+  score?: number;
   issue: string;
-  evidence: string[]; // verbatim quotes from the transcript
+  evidence?: string[]; // verbatim quotes from the transcript, when available
   correctedExamples?: { wrong: string; right: string }[];
-  recommendedPractice: string;
+  recommendedPractice?: string;
 };
 
 export type Strength = {
   title: string;
-  evidence: string; // the concrete number/fact backing this up
+  evidence?: string; // the concrete number/fact backing this up, when available
 };
 
 export type GrowthArea = {
   title: string;
   score?: number;
-  detail: string;
+  detail?: string;
 };
 
 export type CourseRecommendation = {
